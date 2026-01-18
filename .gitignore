@@ -95,7 +95,7 @@ Thumbs.db
 
 # Logs
 *.log
-logs/
+/logs/
 
 # Temporary files
 tmp/
