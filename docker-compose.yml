@@ -1,0 +1,113 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: housing-api
+    ports:
+      - "8000:8000"
+    environment:
+      ENVIRONMENT: development
+      LOG_LEVEL: DEBUG
+      SECRET_KEY: dev-secret-key-change-in-production
+      ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+      RATE_LIMIT_PER_MINUTE: "100"
+      DATABASE_URL: sqlite:///./data/app.db
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - api-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - housing-network
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: housing-test
+    environment:
+      ENVIRONMENT: testing
+      LOG_LEVEL: WARNING
+      SECRET_KEY: test-secret-key-isolated
+      DATABASE_URL: "sqlite:///:memory:"
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+    command: ["pytest", "tests/", "-v", "--tb=short"]
+    profiles:
+      - test
+    networks:
+      - test-network
+
+  test-unit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: housing-test-unit
+    environment:
+      ENVIRONMENT: testing
+      LOG_LEVEL: WARNING
+      SECRET_KEY: test-unit-key
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+    command: ["pytest", "tests/unit/", "-v", "--tb=short", "-m", "unit"]
+    profiles:
+      - test
+    networks:
+      - test-network
+
+  test-integration:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: housing-test-integration
+    environment:
+      ENVIRONMENT: testing
+      LOG_LEVEL: WARNING
+      SECRET_KEY: test-integration-key
+      DATABASE_URL: "sqlite:///:memory:"
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+    command: ["pytest", "tests/integration/", "-v", "--tb=short", "-m", "integration"]
+    profiles:
+      - test
+    networks:
+      - test-network
+
+  lint:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: housing-lint
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+    command: ["sh", "-c", "ruff check src/ tests/ && ruff format --check src/ tests/"]
+    profiles:
+      - lint
+    networks:
+      - test-network
+
+networks:
+  housing-network:
+    name: housing-network
+  test-network:
+    name: housing-test-network
+
+volumes:
+  api-data:
+    driver: local
