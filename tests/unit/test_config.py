@@ -1,6 +1,5 @@
 """Unit tests for configuration - no external dependencies."""
 
-
 from src.config import settings
 from src.constants import (
     ALL_FEATURE_COLUMNS,

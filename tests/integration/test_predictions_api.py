@@ -183,9 +183,9 @@ class TestBatchPredictionAPI:
         expected = [320201.58554044, 58815.45033765, 192575.77355635]
         for i, prediction in enumerate(data["predictions"]):
             predicted = prediction["predicted_price"]
-            assert (
-                predicted == expected[i]
-            ), f"Sample {i+1}: Expected {expected[i]}, got {predicted}"
+            assert predicted == expected[i], (
+                f"Sample {i + 1}: Expected {expected[i]}, got {predicted}"
+            )
 
     def test_batch_predict_empty_list(self, client: TestClient, auth_headers: dict):
         """Test batch prediction with empty list fails via API."""
