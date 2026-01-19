@@ -2,15 +2,11 @@
 
 import logging
 import time
-from functools import lru_cache
-from pathlib import Path
 from typing import TYPE_CHECKING
 
-import joblib
-import pandas as pd
-
-from src.config import settings
-from src.constants import ALL_FEATURE_COLUMNS, OCEAN_PROXIMITY_COLUMNS
+from src.core.exceptions import PredictionError
+from src.ml.model import load_model
+from src.ml.preprocessing import prepare_batch_features, prepare_features
 from src.predictions.schema import (
     BatchPredictionResponse,
     HouseFeatures,
@@ -21,78 +17,6 @@ if TYPE_CHECKING:
     from src.logs.repository import PredictionLogRepository
 
 logger = logging.getLogger(__name__)
-
-
-class ModelLoadError(Exception):
-    """Raised when the ML model cannot be loaded."""
-
-    pass
-
-
-class PredictionError(Exception):
-    """Raised when prediction fails."""
-
-    pass
-
-
-@lru_cache(maxsize=1)
-def load_model():
-    """Load the ML model from disk. Cached to load only once."""
-    model_path = Path(settings.MODEL_PATH)
-
-    if not model_path.exists():
-        raise ModelLoadError(f"Model file not found: {model_path}")
-
-    try:
-        logger.info(f"Loading model from: {model_path}")
-        model = joblib.load(model_path)
-        return model
-    except Exception as e:
-        logger.error(f"Failed to load model: {e}")
-        raise ModelLoadError(f"Failed to load model: {e}") from e
-
-
-def _prepare_features(features: HouseFeatures) -> pd.DataFrame:
-    """Convert HouseFeatures to DataFrame for model input."""
-    data = {
-        "longitude": features.longitude,
-        "latitude": features.latitude,
-        "housing_median_age": features.housing_median_age,
-        "total_rooms": features.total_rooms,
-        "total_bedrooms": features.total_bedrooms,
-        "population": features.population,
-        "households": features.households,
-        "median_income": features.median_income,
-    }
-
-    # One-hot encode ocean_proximity
-    for col in OCEAN_PROXIMITY_COLUMNS:
-        category = col.replace("ocean_proximity_", "")
-        data[col] = 1.0 if features.ocean_proximity.value == category else 0.0
-
-    return pd.DataFrame([data], columns=ALL_FEATURE_COLUMNS)
-
-
-def _prepare_batch_features(features_list: list[HouseFeatures]) -> pd.DataFrame:
-    """Convert list of HouseFeatures to DataFrame for batch prediction."""
-    rows = []
-    for features in features_list:
-        data = {
-            "longitude": features.longitude,
-            "latitude": features.latitude,
-            "housing_median_age": features.housing_median_age,
-            "total_rooms": features.total_rooms,
-            "total_bedrooms": features.total_bedrooms,
-            "population": features.population,
-            "households": features.households,
-            "median_income": features.median_income,
-        }
-        for col in OCEAN_PROXIMITY_COLUMNS:
-            category = col.replace("ocean_proximity_", "")
-            data[col] = 1.0 if features.ocean_proximity.value == category else 0.0
-        rows.append(data)
-
-    return pd.DataFrame(rows, columns=ALL_FEATURE_COLUMNS)
 
 
 class PredictionService:
@@ -109,7 +33,7 @@ class PredictionService:
         start_time = time.time()
 
         try:
-            X = _prepare_features(features)
+            X = prepare_features(features)
             prediction = self.model.predict(X)
             predicted_price = round(float(prediction[0]), 8)
             response_time_ms = int((time.time() - start_time) * 1000)
@@ -136,7 +60,7 @@ class PredictionService:
         start_time = time.time()
 
         try:
-            X = _prepare_batch_features(features_list)
+            X = prepare_batch_features(features_list)
             predictions = self.model.predict(X)
             response_time_ms = int((time.time() - start_time) * 1000)
 

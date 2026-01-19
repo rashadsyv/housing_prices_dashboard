@@ -21,8 +21,8 @@ from src.core.logging import setup_logging
 from src.core.rate_limiter import limiter
 from src.health.router import router as health_router
 from src.logs.router import router as logs_router
+from src.ml.model import load_model
 from src.predictions.router import router as predictions_router
-from src.predictions.service import load_model
 
 logger = logging.getLogger(__name__)
 

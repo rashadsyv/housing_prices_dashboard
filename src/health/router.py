@@ -9,7 +9,7 @@ from sqlalchemy import text
 
 from src.config import settings
 from src.core.database import engine
-from src.predictions.service import load_model
+from src.ml.model import load_model
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

@@ -5,6 +5,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Request, status
 
 from src.auth.dependencies import CurrentUserDep
+from src.core.exceptions import PredictionError
 from src.core.rate_limiter import get_rate_limit_string, limiter
 from src.predictions.dependencies import PredictionServiceDep
 from src.predictions.schema import (
@@ -13,7 +14,6 @@ from src.predictions.schema import (
     HouseFeatures,
     PredictionResponse,
 )
-from src.predictions.service import PredictionError
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
